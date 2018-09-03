@@ -2,6 +2,7 @@ import numpy as np
 from NNbase import FCNetwork, BatchGen
 
 import matplotlib.pyplot as plt
+plt.ion()
 
 max_samples=1000
 
@@ -45,21 +46,26 @@ images_test= maxnormalize(images_test)
 images_tr = maxnormalize(images_tr)
 
 
-Nsamp=3
+Nsamp=100
 x,y = images_tr[:Nsamp, :, :], labels_tr[:Nsamp ]
 x = np.reshape(x, (Nsamp, 28 * 28))
 y = digit_onehot_embedding(y)
 
-num_layers = 3
-layer_sizes = [784, 256, 256, 10]
-activations = ['relu', 'relu', 'softmax']
+num_layers = 2
+layer_sizes = [784, 256, 10]
+activations = [ 'relu', 'softmax']
 fcnet = FCNetwork(num_layers)
 fcnet.set_layer_sizes(layer_sizes)
 fcnet.set_cost_function('dkl')
 fcnet.set_activation_functions(activations)
 fcnet.initialize_all()
-batch_size =3
-epochs=100
+batch_size =32
+epochs=1000
 batchgen = BatchGen(x, y, batch_size).get_batches
+x,y=batchgen()
+xb,yb = x[0], y[0]
 
-costs=fcnet.train_SGD(batchgen, epochs, lr=1e-2)
+# plt.hist(fcnet.weights[2].flatten())
+costs, acc=fcnet.train_SGD(batchgen, epochs, lr=1e-2)
+plt.plot(costs)
+plt.plot(acc)

@@ -14,13 +14,21 @@ def accuracy(ybatch, y):
     maxvals = np.repeat(np.max(y, axis=1).reshape((nbatch,1)), k, axis=1)
     return np.mean(np.sum(ybatch * (y==maxvals), axis=1))
 
+    # note: for the softmax probability conservation comes from summing along the
+    #second axis only -- assumes a 'default' input shape of (nsamp, batch)
+def softmax(x):
+    nsamp, k = x.shape
+    p=np.exp(x)
+    return p/ np.repeat(np.sum(p, axis=1).reshape(nsamp, 1), k, axis=1)
 
 class FCNetwork:
     """fully connected network"""
 
+    #implementations of relevant nonlinearities
+
     nl_functions = {'relu': lambda x: np.maximum(0, x),
                     'sigmoid': lambda x : 1.0 / (1.0 + np.exp(-x)),
-                    'softmax': lambda x: np.exp(x)/ np.sum(np.exp(x))}
+                    'softmax': softmax}
     nl_gradients = {'relu': lambda x, y: np.array(x>0, dtype=np.float32),
                     'sigmoid': lambda x, y: y * (1 - y)}
 
@@ -155,6 +163,10 @@ class FCNetwork:
             self.y[i]=y
             inputs = y
 
+    def get_output(self):
+        """ Returns the outputs of the final layer of neurons"""
+        return self.y[self.num_layers]
+
     def backward_pass(self, ybatch):
         """ Runs a single backward pass of the network, using the training y-values of ybatch.
             """
@@ -194,7 +206,7 @@ class FCNetwork:
             Assumes a KL ( or crossentropy) loss function"""
         if self.cost_function != 'dkl':
             raise ValueError("cost function {0} not implemented for softmax".format(self.cost_function))
-        yself = self.y[self.num_layers]
+        yself = self.get_output()
         if y.shape != yself.shape:
             raise ValueError
         return (yself - y)
@@ -208,7 +220,7 @@ class FCNetwork:
 
     def get_cost_function(self, ybatch):
         f = self.nonlinearities[self.num_layers]
-        y = self.y[self.num_layers]
+        y = self.get_output()
         batch_cost_functions = {'softmax': lambda ybatch, y: dkl(ybatch, y)}
         return batch_cost_functions[f](ybatch, y)
 
@@ -234,7 +246,7 @@ class FCNetwork:
         return self.get_cost_function(ybatch)
 
     def compute_accuracy(self, ybatch):
-        return accuracy(ybatch, self.y[self.num_layers])
+        return accuracy(ybatch, self.get_output())
 
     def update_weights_SGD(self, lr):
         """ performs a gradient-descent update of the weights with learning rate lr"""
